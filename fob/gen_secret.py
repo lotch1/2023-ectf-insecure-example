@@ -14,8 +14,8 @@
 
 import json
 import argparse
+import numpy as np
 from pathlib import Path
-
 
 def main():
     parser = argparse.ArgumentParser()
@@ -40,7 +40,9 @@ def main():
             fp.write(f'#define PAIR_PIN "{args.pair_pin}"\n')
             fp.write(f'#define CAR_ID "{args.car_id}"\n')
             fp.write(f'#define CAR_SECRET "{car_secret}"\n\n')
-            fp.write('#define PASSWORD "unlock"\n\n')
+            fp.write('#define PASSWORD "unlockpleasexoxo"\n\n')
+            fp.write('#define AUTHENTICATON "2xDq#B5Y00000000"\n\n')
+            fp.write('#define KEY "oGt4vjXYc7&0VcuP"\n')
             fp.write("#endif\n")
     else:
         # Write to header file
@@ -51,7 +53,9 @@ def main():
             fp.write('#define PAIR_PIN "000000"\n')
             fp.write('#define CAR_ID "000000"\n')
             fp.write('#define CAR_SECRET "000000"\n\n')
-            fp.write('#define PASSWORD "unlock"\n\n')
+            fp.write('#define PASSWORD "unlockxo"\n\n')
+            fp.write('#define AUTHENTICATON "0000000000000000"\n\n')
+            fp.write('#define KEY "0000000000000000"\n')
             fp.write("#endif\n")
 
 

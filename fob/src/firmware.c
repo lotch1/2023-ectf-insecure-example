@@ -12,6 +12,7 @@
  * @copyright Copyright (c) 2023 The MITRE Corporation
  */
 
+#include <stdio.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
@@ -33,10 +34,14 @@
 #include "feature_list.h"
 #include "uart.h"
 
-// this will run if EXAMPLE_AES is defined in the Makefile (see line 54)
-#ifdef EXAMPLE_AES
-#include "aes.h"
-#endif
+#include "aead.h"
+#include "api.h"
+
+#include "sha256.h"
+
+#define MAX_MESSAGE_LENGTH			    16
+#define MAX_ASSOCIATED_DATA_LENGTH	16
+#define SHA256_DIGEST_LENGTH 32
 
 #define FOB_STATE_PTR 0x3FC00
 #define FLASH_DATA_SIZE         \
@@ -52,14 +57,17 @@ typedef struct
 {
   uint8_t car_id[8];
   uint8_t feature;
+  uint8_t Hash[32];
 } ENABLE_PACKET;
 
 // Defines a struct for the format of a pairing message
 typedef struct
 {
   uint8_t car_id[8];
-  uint8_t password[8];
+  uint8_t password[16];
   uint8_t pin[8];
+  uint8_t auth[16];
+  uint8_t key[16];
 } PAIR_PACKET;
 
 // Defines a struct for the format of start message
@@ -68,6 +76,7 @@ typedef struct
   uint8_t car_id[8];
   uint8_t num_active;
   uint8_t features[NUM_FEATURES];
+  uint8_t Hash[NUM_FEATURES][32]; // add a hash field
 } FEATURE_DATA;
 
 // Defines a struct for storing the state in flash
@@ -102,6 +111,14 @@ int main(void)
   FLASH_DATA fob_state_ram;
   FLASH_DATA *fob_state_flash = (FLASH_DATA *)FOB_STATE_PTR;
 
+  fob_state_ram.pair_info.car_id[0] = 0x00;
+  fob_state_ram.pair_info.car_id[1] = 0x00;
+  fob_state_ram.pair_info.car_id[2] = 0x00;
+  fob_state_ram.pair_info.car_id[3] = 0x00;
+  fob_state_ram.pair_info.car_id[4] = 0x00;
+  fob_state_ram.pair_info.car_id[5] = 0x00;
+  fob_state_ram.pair_info.car_id[6] = 0x00;
+  fob_state_ram.pair_info.car_id[7] = 0x00;
 // If paired fob, initialize the system information
 #if PAIRED == 1
   if (fob_state_flash->paired == FLASH_UNPAIRED)
@@ -110,10 +127,14 @@ int main(void)
     strcpy((char *)(fob_state_ram.pair_info.pin), PAIR_PIN);
     strcpy((char *)(fob_state_ram.pair_info.car_id), CAR_ID);
     strcpy((char *)(fob_state_ram.feature_info.car_id), CAR_ID);
+    strcpy((char *)(fob_state_ram.pair_info.auth), AUTHENTICATON);
+    strcpy((char *)(fob_state_ram.pair_info.key), KEY);
     fob_state_ram.paired = FLASH_PAIRED;
 
     saveFobState(&fob_state_ram);
   }
+#else
+  fob_state_ram.paired = FLASH_UNPAIRED;
 #endif
 
   if (fob_state_flash->paired == FLASH_PAIRED)
@@ -131,27 +152,8 @@ int main(void)
   // Initialize UART
   uart_init();
 
-#ifdef EXAMPLE_AES
-  // -------------------------------------------------------------------------
-  // example encryption using tiny-AES-c
-  // -------------------------------------------------------------------------
-  struct AES_ctx ctx;
-  uint8_t key[16] = {0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7,
-                     0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf};
-  uint8_t plaintext[16] = "0123456789abcdef";
-
-  // initialize context
-  AES_init_ctx(&ctx, key);
-
-  // encrypt buffer (encryption happens in place)
-  AES_ECB_encrypt(&ctx, plaintext);
-
-  // decrypt buffer (decryption happens in place)
-  AES_ECB_decrypt(&ctx, plaintext);
-  // -------------------------------------------------------------------------
-  // end example
-  // -------------------------------------------------------------------------
-#endif
+  //crypto_aead_encrypt(ct, &clen, msg, MAX_MESSAGE_LENGTH, ad, MAX_ASSOCIATED_DATA_LENGTH, NULL, nonce, key);
+  //crypto_aead_decrypt(msg1, MAX_MESSAGE_LENGTH, NULL, ct, &clen, ad, MAX_ASSOCIATED_DATA_LENGTH, nonce, key);
 
   // Initialize board link UART
   setup_board_link();
@@ -181,6 +183,7 @@ int main(void)
       if ((uart_char != '\r') && (uart_char != '\n') && (uart_char != '\0') &&
           (uart_char != 0xD))
       {
+        //uart_write(BOARD_UART,uart_buffer,16);
         uart_buffer[uart_buffer_index] = uart_char;
         uart_buffer_index++;
       }
@@ -188,7 +191,7 @@ int main(void)
       {
         uart_buffer[uart_buffer_index] = 0x00;
         uart_buffer_index = 0;
-
+        
         if (!(strcmp((char *)uart_buffer, "enable")))
         {
           enableFeature(&fob_state_ram);
@@ -212,6 +215,7 @@ int main(void)
         unlockCar(&fob_state_ram);
         if (receiveAck())
         {
+
           startCar(&fob_state_ram);
         }
       }
@@ -231,9 +235,10 @@ void pairFob(FLASH_DATA *fob_state_ram)
   // Start pairing transaction - fob is already paired
   if (fob_state_ram->paired == FLASH_PAIRED)
   {
+    //uart_write(HOST_UART, (uint8_t *)ct, &clen);
     int16_t bytes_read;
     uint8_t uart_buffer[8];
-    uart_write(HOST_UART, (uint8_t *)"Enter pin: ", 11);
+    uart_write(HOST_UART, (uint8_t *)"P", 1);
     bytes_read = uart_readline(HOST_UART, uart_buffer);
 
     if (bytes_read == 6)
@@ -261,7 +266,8 @@ void pairFob(FLASH_DATA *fob_state_ram)
     strcpy((char *)fob_state_ram->feature_info.car_id,
            (char *)fob_state_ram->pair_info.car_id);
 
-    uart_write(HOST_UART, (uint8_t *)"Paired", 6);
+    //uart_write(HOST_UART, (uint8_t *)"Paired", 6);
+    //uart_write(HOST_UART, (uint8_t *)msg1, MAX_MESSAGE_LENGTH);
 
     saveFobState(fob_state_ram);
   }
@@ -274,24 +280,57 @@ void pairFob(FLASH_DATA *fob_state_ram)
  */
 void enableFeature(FLASH_DATA *fob_state_ram)
 {
+  
+  int i;
   if (fob_state_ram->paired == FLASH_PAIRED)
   {
-    uint8_t uart_buffer[20];
+
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    uint8_t uart_buffer[41];
+
     uart_readline(HOST_UART, uart_buffer);
 
+    //uart_write(BOARD_UART, uart_buffer, 42);
+
     ENABLE_PACKET *enable_message = (ENABLE_PACKET *)uart_buffer;
-    if (strcmp((char *)fob_state_ram->pair_info.car_id,
-               (char *)enable_message->car_id))
+
+    char concatenated_message[9];
+    for (i = 0; i < 8; i++) {
+      concatenated_message[i] = enable_message->car_id[i];
+    }
+
+    concatenated_message[8] = enable_message->feature;
+    //uart_write(BOARD_UART, enable_message->car_id, 8);
+    //uart_write(BOARD_UART, enable_message->feature, 1);
+    //uart_write(BOARD_UART, concatenated_message, 9);
+    
+
+    //snprintf(concatenated_message, sizeof(concatenated_message), "%s%s", enable_message->car_id, enable_message->feature);
+
+    sha256_hash(concatenated_message, hash);
+
+    //uart_write(BOARD_UART,(uint8_t *)hash,32);
+    //uart_write(BOARD_UART,enable_message->Hash,32);
+    // Authenticate the extracted hash bytes
+    if (memcmp(hash, (char *)enable_message->Hash, SHA256_DIGEST_LENGTH) != 0){
+      return;
+    }
+    uart_write(BOARD_UART, (uint8_t *)"Enabled", 7);
+    uart_write(BOARD_UART, fob_state_ram->pair_info.car_id, 8);
+    uart_write(BOARD_UART, enable_message->car_id, 8);
+    
+    if (memcmp((char *)fob_state_ram->pair_info.car_id,
+               (char *)enable_message->car_id, 8) != 0)
     {
       return;
     }
-
+    uart_write(BOARD_UART, (uint8_t *)"Enabled", 7);
     // Feature list full
     if (fob_state_ram->feature_info.num_active == NUM_FEATURES)
     {
       return;
     }
-
+    uart_write(BOARD_UART, (uint8_t *)"Enabled", 7);
     // Search for feature in list
     for (int i = 0; i < fob_state_ram->feature_info.num_active; i++)
     {
@@ -300,10 +339,11 @@ void enableFeature(FLASH_DATA *fob_state_ram)
         return;
       }
     }
-
+    uart_write(BOARD_UART, (uint8_t *)"Enabled", 7);
     fob_state_ram->feature_info
         .features[fob_state_ram->feature_info.num_active] =
         enable_message->feature;
+    strcpy((char *)(fob_state_ram->feature_info.Hash[fob_state_ram->feature_info.num_active]), enable_message->Hash);
     fob_state_ram->feature_info.num_active++;
 
     saveFobState(fob_state_ram);
@@ -320,11 +360,53 @@ void unlockCar(FLASH_DATA *fob_state_ram)
 {
   if (fob_state_ram->paired == FLASH_PAIRED)
   {
+    unsigned char		ad[MAX_ASSOCIATED_DATA_LENGTH];
+    unsigned char		ct[MAX_MESSAGE_LENGTH + CRYPTO_ABYTES];
+    unsigned char		msg[MAX_MESSAGE_LENGTH];
+    unsigned long long  clen;
+    ad[0] = 0xCA;
+	  ad[1] = 0xFE;
+	  ad[2] = 0xBA; 
+	  ad[3] = 0xBE;
+	  ad[4] = 0xDE;
+	  ad[5] = 0xAD;
+	  ad[6] = 0xBE;
+	  ad[7] = 0xEF;
+	  ad[8] = 0x00;
+	  ad[9] = 0x01;
+	  ad[10] = 0x02;
+	  ad[11] = 0x03;
+	  ad[12] = 0x04;
+	  ad[13] = 0x05;
+	  ad[14] = 0x06;
+	  ad[15] = 0x07;
+    //uart_write(HOST_UART, fob_state_ram->pair_info.key, 16);
     MESSAGE_PACKET message;
-    message.message_len = 6;
-    message.magic = UNLOCK_MAGIC;
-    message.buffer = fob_state_ram->pair_info.password;
+    
+    message.message_len = 16;
+    message.magic = AUTH_MAGIC;
+    message.buffer = fob_state_ram->pair_info.auth;
     send_board_message(&message);
+    //uart_write(HOST_UART, fob_state_ram->pair_info.key, 16);
+    //uart_write(HOST_UART, message.buffer, 8);
+    receive_board_message_by_type(&message, NONCE_MAGIC);
+    //message.buffer[message.message_len] = 0;
+    //uart_write(HOST_UART, message.buffer, 16);
+    if (message.magic == NONCE_MAGIC)
+    {
+      
+      uart_write(HOST_UART, fob_state_ram->pair_info.password, 16);
+      uart_write(HOST_UART, message.buffer, 16);
+      uart_write(HOST_UART, fob_state_ram->pair_info.key, MAX_MESSAGE_LENGTH);
+      uart_write(HOST_UART, (uint8_t *)ad, MAX_MESSAGE_LENGTH);
+      crypto_aead_encrypt(ct, &clen, (char *)(fob_state_ram->pair_info.password), 16, ad, MAX_ASSOCIATED_DATA_LENGTH, NULL, (char *)message.buffer, (char *)(fob_state_ram->pair_info.key));
+      MESSAGE_PACKET message2;
+      message2.message_len = 32;
+      message2.magic = UNLOCK_MAGIC;
+      message2.buffer = (uint8_t *)ct;
+      uart_write(HOST_UART, message2.buffer, 32);
+      send_board_message(&message2);
+    }
   }
 }
 
@@ -337,11 +419,28 @@ void startCar(FLASH_DATA *fob_state_ram)
 {
   if (fob_state_ram->paired == FLASH_PAIRED)
   {
-    MESSAGE_PACKET message;
-    message.magic = START_MAGIC;
-    message.message_len = sizeof(FEATURE_DATA);
-    message.buffer = (uint8_t *)&fob_state_ram->feature_info;
-    send_board_message(&message);
+    unsigned char		ad[MAX_ASSOCIATED_DATA_LENGTH];
+    ad[0] = 0xCA;
+	  ad[1] = 0xFE;
+	  ad[2] = 0xBA; 
+    ad[3] = 0xBE;
+    ad[4] = 0xDE;
+	  ad[5] = 0xAD;
+    ad[6] = 0xBE;
+	  ad[7] = 0xEF;
+	  ad[8] = 0x00;
+    ad[9] = 0x01;
+	  ad[10] = 0x02;
+	  ad[11] = 0x03;
+    ad[12] = 0x04;
+	  ad[13] = 0x05;
+	  ad[14] = 0x06;
+    ad[15] = 0x07;
+    MESSAGE_PACKET message3;
+    message3.magic = START_MAGIC;
+    message3.message_len = 16;//sizeof(FEATURE_DATA);
+    message3.buffer = (uint8_t *)ad;//(uint8_t *)&fob_state_ram->feature_info;
+    send_board_message(&message3);
   }
 }
 
@@ -352,8 +451,17 @@ void startCar(FLASH_DATA *fob_state_ram)
  */
 void saveFobState(FLASH_DATA *flash_data)
 {
+  // Save the FLASH_DATA to flash memory
   FlashErase(FOB_STATE_PTR);
   FlashProgram((uint32_t *)flash_data, FOB_STATE_PTR, FLASH_DATA_SIZE);
+}
+
+void sha256_hash(unsigned char* message, unsigned char* hash) {
+    //SHA256_CTX sha256;
+    //SHA256_Init(&sha256);
+    //SHA256_Update(&sha256, message, strlen(message));
+    //SHA256_Final(hash, &sha256);
+    sha256_easy_hash(message, 9, hash);
 }
 
 /**

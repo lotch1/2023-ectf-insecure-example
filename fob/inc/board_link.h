@@ -27,6 +27,8 @@
 #define UNLOCK_MAGIC 0x56
 #define ENABLE_MAGIC 0x57
 #define START_MAGIC 0x57
+#define AUTH_MAGIC 0x58
+#define NONCE_MAGIC 0x59
 #define BOARD_UART ((uint32_t)UART1_BASE)
 
 /**

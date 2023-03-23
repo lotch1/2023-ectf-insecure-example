@@ -4,7 +4,7 @@
         {
             "name": "Cortex Debug",
             "cwd": "${workspaceFolder}",
-            "executable": "${workspaceRoot}/build/car_o0.elf",
+            "executable": "${workspaceRoot}/CAR_OUT1/CAR_NAME1.elf",
             "armToolchainPath": "/path/to/arm-none-eabi/bin",
             "request": "launch",
             "type": "cortex-debug",

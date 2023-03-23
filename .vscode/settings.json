@@ -1,0 +1,8 @@
+{
+    "cmake.configureOnOpen": true,
+    "files.associations": {
+        "feature_list.h": "c",
+        "rom.h": "c",
+        "hw_nvic.h": "c"
+    }
+}
