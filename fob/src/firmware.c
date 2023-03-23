@@ -152,9 +152,6 @@ int main(void)
   // Initialize UART
   uart_init();
 
-  //crypto_aead_encrypt(ct, &clen, msg, MAX_MESSAGE_LENGTH, ad, MAX_ASSOCIATED_DATA_LENGTH, NULL, nonce, key);
-  //crypto_aead_decrypt(msg1, MAX_MESSAGE_LENGTH, NULL, ct, &clen, ad, MAX_ASSOCIATED_DATA_LENGTH, nonce, key);
-
   // Initialize board link UART
   setup_board_link();
 
@@ -235,7 +232,6 @@ void pairFob(FLASH_DATA *fob_state_ram)
   // Start pairing transaction - fob is already paired
   if (fob_state_ram->paired == FLASH_PAIRED)
   {
-    //uart_write(HOST_UART, (uint8_t *)ct, &clen);
     int16_t bytes_read;
     uint8_t uart_buffer[8];
     uart_write(HOST_UART, (uint8_t *)"P", 1);
@@ -265,9 +261,6 @@ void pairFob(FLASH_DATA *fob_state_ram)
     fob_state_ram->paired = FLASH_PAIRED;
     strcpy((char *)fob_state_ram->feature_info.car_id,
            (char *)fob_state_ram->pair_info.car_id);
-
-    //uart_write(HOST_UART, (uint8_t *)"Paired", 6);
-    //uart_write(HOST_UART, (uint8_t *)msg1, MAX_MESSAGE_LENGTH);
 
     saveFobState(fob_state_ram);
   }
@@ -300,24 +293,13 @@ void enableFeature(FLASH_DATA *fob_state_ram)
     }
 
     concatenated_message[8] = enable_message->feature;
-    //uart_write(BOARD_UART, enable_message->car_id, 8);
-    //uart_write(BOARD_UART, enable_message->feature, 1);
-    //uart_write(BOARD_UART, concatenated_message, 9);
-    
 
-    //snprintf(concatenated_message, sizeof(concatenated_message), "%s%s", enable_message->car_id, enable_message->feature);
+    sha256_easy_hash(concatenated_message, 9, hash);
 
-    sha256_hash(concatenated_message, hash);
-
-    //uart_write(BOARD_UART,(uint8_t *)hash,32);
-    //uart_write(BOARD_UART,enable_message->Hash,32);
     // Authenticate the extracted hash bytes
     if (memcmp(hash, (char *)enable_message->Hash, SHA256_DIGEST_LENGTH) != 0){
       return;
     }
-    uart_write(BOARD_UART, (uint8_t *)"Enabled", 7);
-    uart_write(BOARD_UART, fob_state_ram->pair_info.car_id, 8);
-    uart_write(BOARD_UART, enable_message->car_id, 8);
     
     if (memcmp((char *)fob_state_ram->pair_info.car_id,
                (char *)enable_message->car_id, 8) != 0)
@@ -387,24 +369,16 @@ void unlockCar(FLASH_DATA *fob_state_ram)
     message.magic = AUTH_MAGIC;
     message.buffer = fob_state_ram->pair_info.auth;
     send_board_message(&message);
-    //uart_write(HOST_UART, fob_state_ram->pair_info.key, 16);
-    //uart_write(HOST_UART, message.buffer, 8);
+    
     receive_board_message_by_type(&message, NONCE_MAGIC);
-    //message.buffer[message.message_len] = 0;
-    //uart_write(HOST_UART, message.buffer, 16);
+    
     if (message.magic == NONCE_MAGIC)
     {
-      
-      uart_write(HOST_UART, fob_state_ram->pair_info.password, 16);
-      uart_write(HOST_UART, message.buffer, 16);
-      uart_write(HOST_UART, fob_state_ram->pair_info.key, MAX_MESSAGE_LENGTH);
-      uart_write(HOST_UART, (uint8_t *)ad, MAX_MESSAGE_LENGTH);
       crypto_aead_encrypt(ct, &clen, (char *)(fob_state_ram->pair_info.password), 16, ad, MAX_ASSOCIATED_DATA_LENGTH, NULL, (char *)message.buffer, (char *)(fob_state_ram->pair_info.key));
       MESSAGE_PACKET message2;
       message2.message_len = 32;
       message2.magic = UNLOCK_MAGIC;
       message2.buffer = (uint8_t *)ct;
-      uart_write(HOST_UART, message2.buffer, 32);
       send_board_message(&message2);
     }
   }
@@ -454,14 +428,6 @@ void saveFobState(FLASH_DATA *flash_data)
   // Save the FLASH_DATA to flash memory
   FlashErase(FOB_STATE_PTR);
   FlashProgram((uint32_t *)flash_data, FOB_STATE_PTR, FLASH_DATA_SIZE);
-}
-
-void sha256_hash(unsigned char* message, unsigned char* hash) {
-    //SHA256_CTX sha256;
-    //SHA256_Init(&sha256);
-    //SHA256_Update(&sha256, message, strlen(message));
-    //SHA256_Final(hash, &sha256);
-    sha256_easy_hash(message, 9, hash);
 }
 
 /**

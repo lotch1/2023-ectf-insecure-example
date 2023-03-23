@@ -96,10 +96,6 @@ int main(void) {
   // Initialize board link UART
   setup_board_link();
 
-  //TRNG_Init(_buff_AppTrng, sizeof(_buff_AppTrng));
-
-  
-
   while (true) {
 
     unlockCar();
@@ -113,7 +109,6 @@ void unlockCar(void) {
   unsigned char       msg[MAX_MESSAGE_LENGTH];
   unsigned char		ad[MAX_ASSOCIATED_DATA_LENGTH];
   unsigned char		nonce[CRYPTO_NPUBBYTES];
-  //unsigned char		ct[MAX_MESSAGE_LENGTH + CRYPTO_ABYTES];
   unsigned long long  mlen;
 
   nonce[0] = 0x6E;
@@ -157,40 +152,23 @@ void unlockCar(void) {
 
   receive_board_message_by_type(&message, AUTH_MAGIC);
 
-  //uart_write(HOST_UART, message.buffer, 8);
-  //uart_write(HOST_UART, auth, 8);
   message.buffer[message.message_len] = 0;
-  //uart_write(HOST_UART, message.buffer, 8);
   if (!strcmp((char *)(message.buffer), (char *)auth)) {
     message.message_len = 16;
     message.magic = NONCE_MAGIC;
     message.buffer = (uint8_t *)nonce;
 
     send_board_message(&message);
-    //uart_write(HOST_UART, message.buffer, 16);
+    
 
     MESSAGE_PACKET message2;
     message2.buffer = buffer;
 
     // Receive packet with some error checking
     receive_board_message_by_type(&message2, UNLOCK_MAGIC);
-    //message.buffer[message.message_len] = 0;
-    //for (i = 0; i < MAX_MESSAGE_LENGTH; i++) {
-    //    ct[i] = message.buffer[i];
-    //}
-    // Pad payload to a string
-    //message.buffer[message.message_len] = 0;
-
-    //uart_write(HOST_UART, message2.buffer, 32);
-    //uart_write(HOST_UART, (uint8_t *)nonce, MAX_MESSAGE_LENGTH);
-    //uart_write(HOST_UART, key, MAX_MESSAGE_LENGTH);
-    //uart_write(HOST_UART, (uint8_t *)ad, MAX_MESSAGE_LENGTH);
     
     crypto_aead_decrypt(msg, &mlen, NULL, (char *)message2.buffer, MAX_MESSAGE_LENGTH + CRYPTO_ABYTES, ad, MAX_ASSOCIATED_DATA_LENGTH, nonce, (char *)key);
-    uart_write(HOST_UART, (uint8_t *)msg, MAX_MESSAGE_LENGTH);
-    uart_write(HOST_UART, pass, MAX_MESSAGE_LENGTH);
-    //buffer = msg;
-    //message.buffer[16] = 0;
+    
     // If the data transfer is the password, unlock
     if (memcmp(msg, (char *)pass, 16) == 0) {
 
