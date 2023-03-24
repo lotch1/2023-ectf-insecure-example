@@ -40,8 +40,6 @@ def package(package_name, car_id, feature_number):
 
     package_message_bytes = package_message_bytes + hash_bytes + str.encode("\n")
 
-    print(package_message_bytes)
-
     # Write data out to package file
     # /package_dir/ is the mounted location inside the container - should not change
     with open(f"/package_dir/{package_name}", "wb") as fhandle:
