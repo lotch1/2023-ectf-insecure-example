@@ -32,7 +32,7 @@ def enable(fob_bridge, package_name):
     # Open and read binary data from package file
     with open(f"/package_dir/{package_name}", "rb") as fhandle:
         message = fhandle.read()
-        fhandle.flush()
+        #fhandle.flush()
 
     # Extract the original hash bytes from the message
     original_hash_bytes = message[9:41]

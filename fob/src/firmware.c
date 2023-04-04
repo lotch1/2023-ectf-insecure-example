@@ -63,12 +63,19 @@ typedef struct
 // Defines a struct for the format of a pairing message
 typedef struct
 {
-  uint8_t car_id[8];
+  uint8_t car_id[16];
   uint8_t password[16];
-  uint8_t pin[8];
+  uint8_t pin[16];
   uint8_t auth[16];
-  uint8_t key[16];
 } PAIR_PACKET;
+
+typedef struct
+{
+  uint8_t car_id[32];
+  uint8_t password[32];
+  uint8_t pin[32];
+  uint8_t auth[32];
+} PAIR_PACKET_OUT;
 
 // Defines a struct for the format of start message
 typedef struct
@@ -85,6 +92,7 @@ typedef struct
   uint8_t paired;
   PAIR_PACKET pair_info;
   FEATURE_DATA feature_info;
+  PAIR_PACKET_OUT pair_info_out;
 } FLASH_DATA;
 
 /*** Function definitions ***/
@@ -98,6 +106,15 @@ void startCar(FLASH_DATA *fob_state_ram);
 // Helper functions - receive ack message
 uint8_t receiveAck();
 
+
+int memcmp_new(const uint8_t *__s1, const uint8_t *__s2, int n);
+
+uint8_t nonce[16];
+uint8_t key[16];
+unsigned long long  clen;
+unsigned long long  mlen;
+unsigned long long  adlen;
+
 /**
  * @brief Main function for the fob example
  *
@@ -108,31 +125,44 @@ uint8_t receiveAck();
  */
 int main(void)
 {
+  strncpy((char *)key, KEY, 16);
+  strncpy((char *)nonce, NONCE, 16);
   FLASH_DATA fob_state_ram;
   FLASH_DATA *fob_state_flash = (FLASH_DATA *)FOB_STATE_PTR;
 
-  fob_state_ram.pair_info.car_id[0] = 0x00;
-  fob_state_ram.pair_info.car_id[1] = 0x00;
-  fob_state_ram.pair_info.car_id[2] = 0x00;
-  fob_state_ram.pair_info.car_id[3] = 0x00;
-  fob_state_ram.pair_info.car_id[4] = 0x00;
-  fob_state_ram.pair_info.car_id[5] = 0x00;
-  fob_state_ram.pair_info.car_id[6] = 0x00;
-  fob_state_ram.pair_info.car_id[7] = 0x00;
+  //fob_state_ram.pair_info.car_id[0] = 0x00;
+  //fob_state_ram.pair_info.car_id[1] = 0x00;
+  //fob_state_ram.pair_info.car_id[2] = 0x00;
+  //fob_state_ram.pair_info.car_id[3] = 0x00;
+  //fob_state_ram.pair_info.car_id[4] = 0x00;
+  //fob_state_ram.pair_info.car_id[5] = 0x00;
+  //fob_state_ram.pair_info.car_id[6] = 0x00;
+  //fob_state_ram.pair_info.car_id[7] = 0x00;
+
+  clen = MAX_MESSAGE_LENGTH + MAX_ASSOCIATED_DATA_LENGTH;
+  mlen = MAX_MESSAGE_LENGTH;
+  adlen = MAX_ASSOCIATED_DATA_LENGTH;
 // If paired fob, initialize the system information
 #if PAIRED == 1
   if (fob_state_flash->paired == FLASH_UNPAIRED)
   {
-    strcpy((char *)(fob_state_ram.pair_info.password), PASSWORD);
-    strcpy((char *)(fob_state_ram.pair_info.pin), PAIR_PIN);
-    strcpy((char *)(fob_state_ram.pair_info.car_id), CAR_ID);
-    strcpy((char *)(fob_state_ram.feature_info.car_id), CAR_ID);
-    strcpy((char *)(fob_state_ram.pair_info.auth), AUTHENTICATON);
-    strcpy((char *)(fob_state_ram.pair_info.key), KEY);
+    strncpy((char *)(fob_state_ram.pair_info.password), PASSWORD, 16);
+    strncpy((char *)(fob_state_ram.pair_info.pin), PAIR_PIN, 8);
+    strncpy((char *)(fob_state_ram.pair_info.car_id), CAR_ID, 8);
+    strncpy((char *)(fob_state_ram.feature_info.car_id), CAR_ID, 8);
+    strncpy((char *)(fob_state_ram.pair_info.auth), AUTHENTICATON, 16);
     fob_state_ram.paired = FLASH_PAIRED;
+
+    crypto_aead_encrypt(fob_state_ram.pair_info_out.car_id, &clen, fob_state_ram.pair_info.car_id, mlen, NULL, adlen, NULL, nonce, key);
+    crypto_aead_encrypt(fob_state_ram.pair_info_out.password, &clen, fob_state_ram.pair_info.password, mlen, NULL, adlen, NULL, nonce, key);
+    crypto_aead_encrypt(fob_state_ram.pair_info_out.pin, &clen, fob_state_ram.pair_info.pin, mlen, NULL, adlen, NULL, nonce, key);
+    crypto_aead_encrypt(fob_state_ram.pair_info_out.auth, &clen, fob_state_ram.pair_info.auth, mlen, NULL, adlen, NULL, nonce, key);
+
+    
 
     saveFobState(&fob_state_ram);
   }
+  
 #else
   fob_state_ram.paired = FLASH_UNPAIRED;
 #endif
@@ -175,12 +205,12 @@ int main(void)
     // Non blocking UART polling
     if (uart_avail(HOST_UART))
     {
+      //uart_write(HOST_UART, fob_state_ram.feature_info.car_id, 8);
       uint8_t uart_char = (uint8_t)uart_readb(HOST_UART);
 
       if ((uart_char != '\r') && (uart_char != '\n') && (uart_char != '\0') &&
           (uart_char != 0xD))
       {
-        //uart_write(BOARD_UART,uart_buffer,16);
         uart_buffer[uart_buffer_index] = uart_char;
         uart_buffer_index++;
       }
@@ -189,11 +219,11 @@ int main(void)
         uart_buffer[uart_buffer_index] = 0x00;
         uart_buffer_index = 0;
         
-        if (!(strcmp((char *)uart_buffer, "enable")))
+        if (!(memcmp_new((char *)uart_buffer, "enable", 7)))
         {
           enableFeature(&fob_state_ram);
         }
-        else if (!(strcmp((char *)uart_buffer, "pair")))
+        else if (!(memcmp_new((char *)uart_buffer, "pair", 4)))
         {
           pairFob(&fob_state_ram);
         }
@@ -209,10 +239,11 @@ int main(void)
       debounce_sw_state = GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_4);
       if (debounce_sw_state == current_sw_state)
       {
+        //uart_write(HOST_UART, fob_state_ram.feature_info.car_id, 8);
         unlockCar(&fob_state_ram);
         if (receiveAck())
         {
-
+          //uart_write(HOST_UART, fob_state_ram.feature_info.car_id, 8);
           startCar(&fob_state_ram);
         }
       }
@@ -240,14 +271,14 @@ void pairFob(FLASH_DATA *fob_state_ram)
     if (bytes_read == 6)
     {
       // If the pin is correct
-      if (!(strcmp((char *)uart_buffer,
-                   (char *)fob_state_ram->pair_info.pin)))
+      if (!(memcmp_new((char *)uart_buffer,
+                   (char *)fob_state_ram->pair_info.pin, 8)))
       {
         // Pair the new key by sending a PAIR_PACKET structure
         // with required information to unlock door
-        message.message_len = sizeof(PAIR_PACKET);
+        message.message_len = sizeof(PAIR_PACKET_OUT);
         message.magic = PAIR_MAGIC;
-        message.buffer = (uint8_t *)&fob_state_ram->pair_info;
+        message.buffer = (uint8_t *)&fob_state_ram->pair_info_out;
         send_board_message(&message);
       }
     }
@@ -256,9 +287,15 @@ void pairFob(FLASH_DATA *fob_state_ram)
   // Start pairing transaction - fob is not paired
   else
   {
-    message.buffer = (uint8_t *)&fob_state_ram->pair_info;
+    message.buffer = (uint8_t *)&fob_state_ram->pair_info_out;
     receive_board_message_by_type(&message, PAIR_MAGIC);
     fob_state_ram->paired = FLASH_PAIRED;
+
+    crypto_aead_decrypt(fob_state_ram->pair_info.car_id, &mlen, NULL, fob_state_ram->pair_info_out.car_id, clen, NULL, adlen, nonce, key);
+    crypto_aead_decrypt(fob_state_ram->pair_info.password, &mlen, NULL, fob_state_ram->pair_info_out.password, clen, NULL, adlen, nonce, key);
+    crypto_aead_decrypt(fob_state_ram->pair_info.pin, &mlen, NULL, fob_state_ram->pair_info_out.pin, clen, NULL, adlen, nonce, key);
+    crypto_aead_decrypt(fob_state_ram->pair_info.auth, &mlen, NULL, fob_state_ram->pair_info_out.auth, clen, NULL, adlen, nonce, key);
+
     strcpy((char *)fob_state_ram->feature_info.car_id,
            (char *)fob_state_ram->pair_info.car_id);
 
@@ -274,7 +311,7 @@ void pairFob(FLASH_DATA *fob_state_ram)
 void enableFeature(FLASH_DATA *fob_state_ram)
 {
   
-  int i;
+  int i = 0;
   if (fob_state_ram->paired == FLASH_PAIRED)
   {
 
@@ -297,11 +334,11 @@ void enableFeature(FLASH_DATA *fob_state_ram)
     sha256_easy_hash(concatenated_message, 9, hash);
 
     // Authenticate the extracted hash bytes
-    if (memcmp(hash, (char *)enable_message->Hash, SHA256_DIGEST_LENGTH) != 0){
+    if (memcmp_new(hash, (char *)enable_message->Hash, SHA256_DIGEST_LENGTH) != 0){
       return;
     }
     
-    if (memcmp((char *)fob_state_ram->pair_info.car_id,
+    if (memcmp_new((char *)fob_state_ram->pair_info.car_id,
                (char *)enable_message->car_id, 8) != 0)
     {
       return;
@@ -325,7 +362,7 @@ void enableFeature(FLASH_DATA *fob_state_ram)
     fob_state_ram->feature_info
         .features[fob_state_ram->feature_info.num_active] =
         enable_message->feature;
-    strcpy((char *)(fob_state_ram->feature_info.Hash[fob_state_ram->feature_info.num_active]), enable_message->Hash);
+    strncpy((char*)fob_state_ram->feature_info.Hash[fob_state_ram->feature_info.num_active], (char*)enable_message->Hash, 32);
     fob_state_ram->feature_info.num_active++;
 
     saveFobState(fob_state_ram);
@@ -342,39 +379,26 @@ void unlockCar(FLASH_DATA *fob_state_ram)
 {
   if (fob_state_ram->paired == FLASH_PAIRED)
   {
-    unsigned char		ad[MAX_ASSOCIATED_DATA_LENGTH];
     unsigned char		ct[MAX_MESSAGE_LENGTH + CRYPTO_ABYTES];
-    unsigned char		msg[MAX_MESSAGE_LENGTH];
-    unsigned long long  clen;
-    ad[0] = 0xCA;
-	  ad[1] = 0xFE;
-	  ad[2] = 0xBA; 
-	  ad[3] = 0xBE;
-	  ad[4] = 0xDE;
-	  ad[5] = 0xAD;
-	  ad[6] = 0xBE;
-	  ad[7] = 0xEF;
-	  ad[8] = 0x00;
-	  ad[9] = 0x01;
-	  ad[10] = 0x02;
-	  ad[11] = 0x03;
-	  ad[12] = 0x04;
-	  ad[13] = 0x05;
-	  ad[14] = 0x06;
-	  ad[15] = 0x07;
-    //uart_write(HOST_UART, fob_state_ram->pair_info.key, 16);
+    
     MESSAGE_PACKET message;
+    uint8_t buffer[16];
     
     message.message_len = 16;
     message.magic = AUTH_MAGIC;
-    message.buffer = fob_state_ram->pair_info.auth;
+    message.buffer = buffer;
+    strncpy((char *)buffer, fob_state_ram->pair_info.auth, 16);
+    //buffer = fob_state_ram->pair_info.auth;
     send_board_message(&message);
     
     receive_board_message_by_type(&message, NONCE_MAGIC);
     
     if (message.magic == NONCE_MAGIC)
     {
-      crypto_aead_encrypt(ct, &clen, (char *)(fob_state_ram->pair_info.password), 16, ad, MAX_ASSOCIATED_DATA_LENGTH, NULL, (char *)message.buffer, (char *)(fob_state_ram->pair_info.key));
+      uart_write(HOST_UART, fob_state_ram->pair_info.password, 16);
+      uart_write(HOST_UART, message.buffer, 16);
+      uart_write(HOST_UART, key, 16);
+      crypto_aead_encrypt(ct, &clen, fob_state_ram->pair_info.password, mlen, NULL, adlen, NULL, message.buffer, key);
       MESSAGE_PACKET message2;
       message2.message_len = 32;
       message2.magic = UNLOCK_MAGIC;
@@ -393,27 +417,12 @@ void startCar(FLASH_DATA *fob_state_ram)
 {
   if (fob_state_ram->paired == FLASH_PAIRED)
   {
-    unsigned char		ad[MAX_ASSOCIATED_DATA_LENGTH];
-    ad[0] = 0xCA;
-	  ad[1] = 0xFE;
-	  ad[2] = 0xBA; 
-    ad[3] = 0xBE;
-    ad[4] = 0xDE;
-	  ad[5] = 0xAD;
-    ad[6] = 0xBE;
-	  ad[7] = 0xEF;
-	  ad[8] = 0x00;
-    ad[9] = 0x01;
-	  ad[10] = 0x02;
-	  ad[11] = 0x03;
-    ad[12] = 0x04;
-	  ad[13] = 0x05;
-	  ad[14] = 0x06;
-    ad[15] = 0x07;
+    //strncpy((char *)(fob_state_ram->feature_info.car_id), CAR_ID, 8);
+
     MESSAGE_PACKET message3;
     message3.magic = START_MAGIC;
-    message3.message_len = 16;//sizeof(FEATURE_DATA);
-    message3.buffer = (uint8_t *)ad;//(uint8_t *)&fob_state_ram->feature_info;
+    message3.message_len = 75;//sizeof(FEATURE_DATA);
+    message3.buffer = (uint8_t *)&fob_state_ram->feature_info;
     send_board_message(&message3);
   }
 }
@@ -444,4 +453,18 @@ uint8_t receiveAck()
   receive_board_message_by_type(&message, ACK_MAGIC);
 
   return message.buffer[0];
+}
+
+int memcmp_new(const uint8_t *__s1, const uint8_t *__s2, int n) {
+  int i;
+  int a = 0;
+  for (i = 0; i < n; i++) {
+    if (__s1[i] == __s2[i]) {
+      a = a || 0;
+    }
+    else {
+      a = a || 1;
+    }
+  }
+  return a;
 }

@@ -43,6 +43,7 @@ def main():
             fp.write('#define PASSWORD "unlockpleasexoxo"\n\n')
             fp.write('#define AUTHENTICATON "2xDq#B5Y00000000"\n\n')
             fp.write('#define KEY "oGt4vjXYc7&0VcuP"\n')
+            fp.write('#define NONCE "oGt4vjXYc7&0VcuP"\n')
             fp.write("#endif\n")
     else:
         # Write to header file
@@ -53,9 +54,10 @@ def main():
             fp.write('#define PAIR_PIN "000000"\n')
             fp.write('#define CAR_ID "000000"\n')
             fp.write('#define CAR_SECRET "000000"\n\n')
-            fp.write('#define PASSWORD "unlockxo"\n\n')
+            fp.write('#define PASSWORD "0000000000000000"\n\n')
             fp.write('#define AUTHENTICATON "0000000000000000"\n\n')
-            fp.write('#define KEY "0000000000000000"\n')
+            fp.write('#define KEY "oGt4vjXYc7&0VcuP"\n')
+            fp.write('#define NONCE "oGt4vjXYc7&0VcuP"\n')
             fp.write("#endif\n")
 
 
