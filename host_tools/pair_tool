@@ -49,13 +49,11 @@ def pair(unpaired_fob_bridge, paired_fob_bridge, pair_pin):
     pair_pin_bytes = str.encode(pair_pin + "\n")
     paired_sock.send(pair_pin_bytes)
 
-    # Set timeout for if pairing fails
-    unpaired_sock.settimeout(5)
     # Try to receive data - if failed, pairing failed
     try:
-        pair_success = unpaired_sock.recv(15)
-        while len(pair_success) < 15:
-            pair_success += unpaired_sock.recv(15 - len(pair_success))
+        pair_success = unpaired_sock.recv(6)
+        while len(pair_success) != 6:
+            pair_success += unpaired_sock.recv(6 - len(pair_success))
 
         print(pair_success)
     except socket.timeout:

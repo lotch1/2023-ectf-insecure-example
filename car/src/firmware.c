@@ -72,6 +72,22 @@ const uint8_t car_id[8] = CAR_ID;
 const uint8_t auth[16] = AUTHENTICATON;
 const uint8_t key[16] = KEY;
 
+/*
+#define CAR_STATE_PTR 0x3FC00
+#define FLASH_DATA_SIZE         \
+  (sizeof(FLASH_DATA) % 4 == 0) \
+      ? sizeof(FLASH_DATA)      \
+      : sizeof(FLASH_DATA) + (4 - (sizeof(FLASH_DATA) % 4))
+
+
+// Defines a struct for the RNG
+typedef struct
+{
+  uint32_t seed;
+  uint32_t rng_value;
+} RNG_PACKET;
+*/
+
 /**
  * @brief Main function for the car example
  *
@@ -250,3 +266,11 @@ int memcmp_new(const uint8_t *__s1, const uint8_t *__s2, int n) {
   }
   return a;
 }
+/*
+void saveFobState(FLASH_DATA *flash_data)
+{
+  // Save the FLASH_DATA to flash memory
+  FlashErase(CAR_STATE_PTR);
+  FlashProgram((uint32_t *)flash_data, CAR_STATE_PTR, FLASH_DATA_SIZE);
+}
+*/
