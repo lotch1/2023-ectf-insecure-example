@@ -334,7 +334,7 @@ void enableFeature(FLASH_DATA *fob_state_ram)
     sha256_easy_hash(concatenated_message, 9, hash);
 
     // Authenticate the extracted hash bytes
-    if (memcmp_new(hash, (char *)enable_message->Hash, SHA256_DIGEST_LENGTH) != 0){
+    if (memcmp_new(hash, (char *)enable_message->Hash, 16) != 0){
       return;
     }
     
