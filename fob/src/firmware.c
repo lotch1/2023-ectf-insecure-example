@@ -130,15 +130,6 @@ int main(void)
   FLASH_DATA fob_state_ram;
   FLASH_DATA *fob_state_flash = (FLASH_DATA *)FOB_STATE_PTR;
 
-  //fob_state_ram.pair_info.car_id[0] = 0x00;
-  //fob_state_ram.pair_info.car_id[1] = 0x00;
-  //fob_state_ram.pair_info.car_id[2] = 0x00;
-  //fob_state_ram.pair_info.car_id[3] = 0x00;
-  //fob_state_ram.pair_info.car_id[4] = 0x00;
-  //fob_state_ram.pair_info.car_id[5] = 0x00;
-  //fob_state_ram.pair_info.car_id[6] = 0x00;
-  //fob_state_ram.pair_info.car_id[7] = 0x00;
-
   clen = MAX_MESSAGE_LENGTH + MAX_ASSOCIATED_DATA_LENGTH;
   mlen = MAX_MESSAGE_LENGTH;
   adlen = MAX_ASSOCIATED_DATA_LENGTH;
@@ -241,6 +232,7 @@ int main(void)
       debounce_sw_state = GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_4);
       if (debounce_sw_state == current_sw_state)
       {
+
         unlockCar(&fob_state_ram);
         if (receiveAck())
         {
@@ -248,6 +240,12 @@ int main(void)
         }
       }
     }
+    
+    int j = 0;
+    for (int i = 0; i < 80000000; i++){
+      j = 1+i;
+    }
+        
     previous_sw_state = current_sw_state;
   }
 }

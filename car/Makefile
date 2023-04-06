@@ -85,25 +85,24 @@ CFLAGS+=-DEXAMPLE_AEAD
 ${COMPILER}/firmware.axf: ${COMPILER}/aead.o
 
 ################ end crypto example ################
-
 ################ start ascon example ################
 # path to crypto library
-#TRNGPATH=${ROOT}/lib/embedded-trng
+RNGPATH=${ROOT}/lib/RNG
 
 # add path to crypto source files to source path
-#VPATH+=${TRNGPATH}
+VPATH+=${RNGPATH}
 
 # add crypto library to includes path
-#IPATH+=${TRNGPATH}
+IPATH+=${RNGPATH}
 
 # add crypto object file to includes path
 # LDFLAGS+=${COMPILER}/aes.o
 
 # add compiler flag to enable example AES code 
-#CFLAGS+=-DEXAMPLE_TRNG
+CFLAGS+=-DEXAMPLE_RNG
 
 # add rule to build crypto library
-#${COMPILER}/firmware.axf: ${COMPILER}/trng.o
+${COMPILER}/firmware.axf: ${COMPILER}/simplerandom.o
 
 ################ end crypto example ################
 # build libraries

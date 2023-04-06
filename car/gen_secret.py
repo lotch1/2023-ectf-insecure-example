@@ -48,6 +48,7 @@ def main():
         fp.write('#define PASSWORD "unlockpleasexoxo"\n\n')
         fp.write('#define AUTHENTICATON "2xDq#B5Y00000000"\n\n')
         fp.write('#define KEY "oGt4vjXYc7&0VcuP"\n')
+        #fp.write('#define SEED "1234567890"\n')
         fp.write("#endif\n")
 
 

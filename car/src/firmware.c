@@ -16,6 +16,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include "inc/hw_ints.h"
 #include "inc/hw_memmap.h"
@@ -26,9 +27,6 @@
 #include "driverlib/pin_map.h"
 #include "driverlib/sysctl.h"
 #include "driverlib/timer.h"
-//#include "driverlib/rom.h"
-
-//#include "trng.h"
 
 #include "secrets.h"
 
@@ -41,6 +39,8 @@
 #define MAX_MESSAGE_LENGTH			    16
 #define MAX_ASSOCIATED_DATA_LENGTH	16
 
+#include "simplerandom.h"
+
 /*** Structure definitions ***/
 // Structure of start_car packet FEATURE_DATA
 typedef struct {
@@ -50,6 +50,12 @@ typedef struct {
   uint8_t Hash[NUM_FEATURES][32];
 } FEATURE_DATA;
 
+typedef struct
+{
+  SimpleRandomCong_t rng_cong;
+  uint8_t paired;
+} FLASH_DATA;
+
 /*** Macro Definitions ***/
 // Definitions for unlock message location in EEPROM
 #define UNLOCK_EEPROM_LOC 0x7C0
@@ -57,14 +63,16 @@ typedef struct {
 
 /*** Function definitions ***/
 // Core functions - unlockCar and startCar
-void unlockCar(void);
+void unlockCar(FLASH_DATA *car_state_ram);
 void startCar(void);
+void saveCarState(FLASH_DATA *flash_data);
 
 // Helper functions - sending ack messages
 void sendAckSuccess(void);
 void sendAckFailure(void);
 
 int memcmp_new(const uint8_t *__s1, const uint8_t *__s2, int n);
+void B16_RNG (uint8_t b[16], FLASH_DATA *car_state_ram);
 
 // Declare password
 const uint8_t pass[16] = PASSWORD;
@@ -72,21 +80,13 @@ const uint8_t car_id[8] = CAR_ID;
 const uint8_t auth[16] = AUTHENTICATON;
 const uint8_t key[16] = KEY;
 
-/*
 #define CAR_STATE_PTR 0x3FC00
 #define FLASH_DATA_SIZE         \
   (sizeof(FLASH_DATA) % 4 == 0) \
       ? sizeof(FLASH_DATA)      \
       : sizeof(FLASH_DATA) + (4 - (sizeof(FLASH_DATA) % 4))
-
-
-// Defines a struct for the RNG
-typedef struct
-{
-  uint32_t seed;
-  uint32_t rng_value;
-} RNG_PACKET;
-*/
+#define FLASH_PAIRED 0x00
+#define FLASH_UNPAIRED 0xFF
 
 /**
  * @brief Main function for the car example
@@ -96,6 +96,19 @@ typedef struct
  */
 int main(void) {
 
+  FLASH_DATA car_state_ram;
+  FLASH_DATA *car_state_flash = (FLASH_DATA *)CAR_STATE_PTR;
+
+  if (car_state_flash->paired == FLASH_UNPAIRED){
+    simplerandom_cong_seed(&car_state_ram.rng_cong, 1234567890u);
+    car_state_ram.paired = FLASH_PAIRED;
+    saveCarState(&car_state_ram);
+  }
+
+  if (car_state_flash->paired == FLASH_PAIRED)
+  {
+    memcpy(&car_state_ram, car_state_flash, FLASH_DATA_SIZE);
+  }
   //uint8_t data[16];
 
   // Ensure EEPROM peripheral is enabled
@@ -110,19 +123,20 @@ int main(void) {
 
   while (true) {
 
-    unlockCar();
+    unlockCar(&car_state_ram);
   }
 }
 
 /**
  * @brief Function that handles unlocking of car
  */
-void unlockCar(void) {
+void unlockCar(FLASH_DATA *car_state_ram) {
   unsigned char       msg[MAX_MESSAGE_LENGTH];
   unsigned char		ad[MAX_ASSOCIATED_DATA_LENGTH];
   unsigned char		nonce[CRYPTO_NPUBBYTES];
   unsigned long long  mlen;
 
+  /*
   nonce[0] = 0x6E;
   nonce[1] = 0x6F;
   nonce[2] = 0x6E; 
@@ -139,6 +153,7 @@ void unlockCar(void) {
   nonce[13] = 0x79;
   nonce[14] = 0x61;
   nonce[15] = 0x79;
+  */
 
   // Create a message struct variable for receiving data
   MESSAGE_PACKET message;
@@ -148,14 +163,15 @@ void unlockCar(void) {
 
   receive_board_message_by_type(&message, AUTH_MAGIC);
 
-  if (!memcmp_new((char *)(message.buffer), (char *)auth, 16)) {
+  if (!memcmp_new((message.buffer), auth, 16)) {
     message.message_len = 16;
     message.magic = NONCE_MAGIC;
     message.buffer = (uint8_t*)nonce;
 
+    B16_RNG (nonce, car_state_ram);
+
     send_board_message(&message);
     
-
     MESSAGE_PACKET message2;
     message2.buffer = buffer;
 
@@ -165,10 +181,16 @@ void unlockCar(void) {
     crypto_aead_decrypt(msg, &mlen, NULL, message2.buffer, MAX_MESSAGE_LENGTH + CRYPTO_ABYTES, NULL, MAX_ASSOCIATED_DATA_LENGTH, nonce, key);
     
     // If the data transfer is the password, unlock
-    if (memcmp_new(msg, (char *)pass, 16) == 0) {
+    if (memcmp_new(msg, pass, 16) == 0) {
       uint8_t eeprom_message[64];
       // Read last 64B of EEPROM
       EEPROMRead((uint32_t *)eeprom_message, UNLOCK_EEPROM_LOC, UNLOCK_EEPROM_SIZE);
+      //int j = 0;
+      //while(j == 0){
+      //  if((uint8_t)uart_readb(HOST_UART) == 'n'){
+      //    j = 1;
+      //  }
+      //}
 
       // Write out full flag if applicable
       uart_write(HOST_UART, eeprom_message, UNLOCK_EEPROM_SIZE);
@@ -199,7 +221,7 @@ void startCar(void) {
   FEATURE_DATA *feature_info = (FEATURE_DATA *)buffer;
 
   // Verify correct car id
-  if (memcmp_new((char *)car_id, (char *)feature_info->car_id, 8)) {
+  if (memcmp_new(car_id, feature_info->car_id, 8)) {
     return;
   }
   //uart_write(HOST_UART, (uint8_t*)"here", 5);
@@ -218,7 +240,6 @@ void startCar(void) {
 
     uart_write(HOST_UART, eeprom_message, FEATURE_SIZE);
   }
-  
 }
 
 /**
@@ -266,11 +287,27 @@ int memcmp_new(const uint8_t *__s1, const uint8_t *__s2, int n) {
   }
   return a;
 }
-/*
-void saveFobState(FLASH_DATA *flash_data)
+
+void saveCarState(FLASH_DATA *flash_data)
 {
   // Save the FLASH_DATA to flash memory
   FlashErase(CAR_STATE_PTR);
   FlashProgram((uint32_t *)flash_data, CAR_STATE_PTR, FLASH_DATA_SIZE);
 }
-*/
+
+void B16_RNG (uint8_t b[16], FLASH_DATA *car_state_ram){
+    
+  uint32_t rng_value;
+  int i;
+
+  for(i = 0; i < 4; i++){
+    rng_value = simplerandom_cong_next(&car_state_ram->rng_cong);
+
+    b[4 * i + 3] = (uint8_t)rng_value;
+    b[4 * i + 2] = (uint8_t)(rng_value>>=8);
+    b[4 * i + 1] = (uint8_t)(rng_value>>=8);
+    b[4 * i] = (uint8_t)(rng_value>>=8);
+  }
+
+  saveCarState(car_state_ram);
+}
