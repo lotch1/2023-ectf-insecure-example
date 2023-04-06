@@ -241,10 +241,10 @@ int main(void)
       }
     }
     
-    int j = 0;
-    for (int i = 0; i < 80000000; i++){
-      j = 1+i;
-    }
+    //int j = 0;
+    //for (int i = 0; i < 80000000; i++){
+    //  j = 1+i;
+    //}
         
     previous_sw_state = current_sw_state;
   }
