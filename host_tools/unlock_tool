@@ -44,7 +44,9 @@ def unlock(car_bridge):
         print(unlock_received)
 
     except socket.timeout:
-        sys.exit("Failed to unlock")
+
+        sys.exit(f"Failed to unlock {unlock_received} {len(unlock_received)}")
+
 
     return 0
 

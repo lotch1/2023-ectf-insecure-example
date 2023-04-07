@@ -236,6 +236,7 @@ int main(void)
         unlockCar(&fob_state_ram);
         if (receiveAck())
         {
+
           startCar(&fob_state_ram);
         }
       }
