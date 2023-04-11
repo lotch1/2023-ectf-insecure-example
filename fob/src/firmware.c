@@ -236,8 +236,8 @@ int main(void)
         unlockCar(&fob_state_ram);
         if (receiveAck())
         {
-
           startCar(&fob_state_ram);
+          
         }
       }
     }
@@ -358,7 +358,7 @@ void enableFeature(FLASH_DATA *fob_state_ram)
     fob_state_ram->feature_info
         .features[fob_state_ram->feature_info.num_active] =
         enable_message->feature;
-    strncpy((char*)fob_state_ram->feature_info.Hash[fob_state_ram->feature_info.num_active], (char*)enable_message->Hash, 32);
+    //strncpy((char*)fob_state_ram->feature_info.Hash[fob_state_ram->feature_info.num_active], (char*)enable_message->Hash, 32);
     fob_state_ram->feature_info.num_active++;
 
     saveFobState(fob_state_ram);
