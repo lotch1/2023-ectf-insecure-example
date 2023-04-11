@@ -360,9 +360,7 @@ void enableFeature(FLASH_DATA *fob_state_ram)
     fob_state_ram->feature_info
         .features[fob_state_ram->feature_info.num_active] =
         enable_message->feature;
-    // fob_state_ram->feature_info
-    //    .Hash[fob_state_ram->feature_info.num_active] =
-    //    enable_message->Hash
+     //fob_state_ram->feature_info.Hash[fob_state_ram->feature_info.num_active] = enable_message->Hash;
     strncpy((char*)fob_state_ram->feature_info.Hash[fob_state_ram->feature_info.num_active], (char*)enable_message->Hash, 32);
     fob_state_ram->feature_info.num_active++;
 
@@ -419,7 +417,7 @@ void startCar(FLASH_DATA *fob_state_ram)
 
     MESSAGE_PACKET message3;
     message3.magic = START_MAGIC;
-    message3.message_len = 75;//sizeof(FEATURE_DATA);
+    /*message3.message_len = 75;//*/sizeof(FEATURE_DATA);
     message3.buffer = (uint8_t *)&fob_state_ram->feature_info;
     send_board_message(&message3);
   }
