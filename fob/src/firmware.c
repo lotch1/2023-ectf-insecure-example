@@ -212,11 +212,13 @@ int main(void)
         uart_buffer[uart_buffer_index] = 0x00;
         uart_buffer_index = 0;
         
-        if (!(memcmp_new((char *)uart_buffer, "enable", 7)))
+        if (!(strcmp((char *)uart_buffer, "enable"))) // Added
+        //if (!(memcmp_new((char *)uart_buffer, "enable", 7)))
         {
           enableFeature(&fob_state_ram);
         }
-        else if (!(memcmp_new((char *)uart_buffer, "pair", 4)))
+        else if (!(strcmp((char *)uart_buffer, "pair"))) //Added
+        //else if (!(memcmp_new((char *)uart_buffer, "pair", 4)))
         {
           pairFob(&fob_state_ram);
         }
@@ -360,7 +362,6 @@ void enableFeature(FLASH_DATA *fob_state_ram)
     fob_state_ram->feature_info
         .features[fob_state_ram->feature_info.num_active] =
         enable_message->feature;
-     //fob_state_ram->feature_info.Hash[fob_state_ram->feature_info.num_active] = enable_message->Hash;
     strncpy((char*)fob_state_ram->feature_info.Hash[fob_state_ram->feature_info.num_active], (char*)enable_message->Hash, 32);
     fob_state_ram->feature_info.num_active++;
 
