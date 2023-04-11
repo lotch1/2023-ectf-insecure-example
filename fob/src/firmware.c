@@ -317,11 +317,12 @@ void enableFeature(FLASH_DATA *fob_state_ram)
   {
 
     unsigned char hash[SHA256_DIGEST_LENGTH];
-    uint8_t uart_buffer[52];
+    uint8_t uart_buffer[41];
 
     uart_readline(HOST_UART, uart_buffer);
 
     ENABLE_PACKET *enable_message = (ENABLE_PACKET *)uart_buffer;
+
 
     char concatenated_message[9];
     for (i = 0; i < 8; i++) {
@@ -331,7 +332,7 @@ void enableFeature(FLASH_DATA *fob_state_ram)
     concatenated_message[8] = enable_message->feature;
 
     sha256_easy_hash(concatenated_message, 9, hash);
-
+    
     // Authenticate the extracted hash bytes
     if (memcmp_new(hash, (char *)enable_message->Hash, 4) != 0){
       return;
@@ -342,6 +343,7 @@ void enableFeature(FLASH_DATA *fob_state_ram)
     {
       return;
     }
+  
     // Feature list full
     if (fob_state_ram->feature_info.num_active == NUM_FEATURES)
     {
@@ -358,6 +360,9 @@ void enableFeature(FLASH_DATA *fob_state_ram)
     fob_state_ram->feature_info
         .features[fob_state_ram->feature_info.num_active] =
         enable_message->feature;
+    // fob_state_ram->feature_info
+    //    .Hash[fob_state_ram->feature_info.num_active] =
+    //    enable_message->Hash
     strncpy((char*)fob_state_ram->feature_info.Hash[fob_state_ram->feature_info.num_active], (char*)enable_message->Hash, 32);
     fob_state_ram->feature_info.num_active++;
 
