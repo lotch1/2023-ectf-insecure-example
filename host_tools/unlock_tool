@@ -48,7 +48,7 @@ def unlock(car_bridge):
 
     while True:
         try:
-            unlock_received += car_sock.recv(1)
+            unlock_received += car_sock.recv()
         except socket.timeout:
             print("Socket timeout - finished receiving")
             break
