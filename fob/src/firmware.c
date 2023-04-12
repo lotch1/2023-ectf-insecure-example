@@ -212,13 +212,11 @@ int main(void)
         uart_buffer[uart_buffer_index] = 0x00;
         uart_buffer_index = 0;
         
-        if (!(strcmp((char *)uart_buffer, "enable"))) // Added
-        //if (!(memcmp_new((char *)uart_buffer, "enable", 7)))
+        if (!(memcmp_new((char *)uart_buffer, "enable", 7)))
         {
           enableFeature(&fob_state_ram);
         }
-        else if (!(strcmp((char *)uart_buffer, "pair"))) //Added
-        //else if (!(memcmp_new((char *)uart_buffer, "pair", 4)))
+        else if (!(memcmp_new((char *)uart_buffer, "pair", 4)))
         {
           pairFob(&fob_state_ram);
         }
@@ -418,7 +416,7 @@ void startCar(FLASH_DATA *fob_state_ram)
 
     MESSAGE_PACKET message3;
     message3.magic = START_MAGIC;
-    /*message3.message_len = 75;//*/sizeof(FEATURE_DATA);
+    message3.message_len = 75;//sizeof(FEATURE_DATA);
     message3.buffer = (uint8_t *)&fob_state_ram->feature_info;
     send_board_message(&message3);
   }

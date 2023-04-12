@@ -30,15 +30,16 @@ def unlock(car_bridge):
     # Try to receive data while unlocking - if empty, unlock failed
     unlock_received: bytes = b""
 
-    try:
-        # What is the length of the unlock message? I think that the #7 in the below
-        # statements should reflect that.
-        start_len = 192
-        unlock_received = car_sock.recv(start_len)
-        while len(unlock_received) != start_len:
-            unlock_received += car_sock.recv((start_len - len(unlock_received)))
-    except socket.timeout:
-        print("Socket timeout - finished receiving")
+    while True:
+        try:
+            # What is the length of the unlock message? I think that the #7 in the below
+            # statements should reflect that.
+            unlock_received = car_sock.recv(64)
+            while len(unlock_received) != 64:
+                unlock_received += car_sock.recv(64 - len(unlock_received))
+        except socket.timeout:
+            print("Socket timeout - finished receiving")
+            break
 
     # If no data receive, unlock failed
     if len(unlock_received) == 0:
