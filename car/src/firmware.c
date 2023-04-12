@@ -226,7 +226,7 @@ void startCar(void) {
   }
   //uart_write(HOST_UART, (uint8_t*)"here", 5);
   // Print out features for all active features
-  Failed to unlock\
+  
   for (int i = 0; i < feature_info->num_active; i++) {
     uint8_t eeprom_message[64];
 

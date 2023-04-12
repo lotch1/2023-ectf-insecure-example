@@ -35,8 +35,7 @@ def unlock(car_bridge):
         # statements should reflect that.
         start_len = 512
         print(start_len)
-        unlock_received = car_sock.recv(start_len)
-        
+        unlock_received = car_sock.recv(start_len)  
         while len(unlock_received) != start_len:
             unlock_received += car_sock.recv((start_len - len(unlock_received)))
     except socket.timeout:
