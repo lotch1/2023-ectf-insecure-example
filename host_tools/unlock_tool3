@@ -34,7 +34,7 @@ def unlock(car_bridge):
         try:
             # What is the length of the unlock message? I think that the #7 in the below
             # statements should reflect that.
-            Ulock_mess_len = 256
+            Ulock_mess_len = 192
             unlock_received = car_sock.recv(Ulock_mess_len)
             while len(unlock_received) != Ulock_mess_len:
                 unlock_received += car_sock.recv(Ulock_mess_len - len(unlock_received))

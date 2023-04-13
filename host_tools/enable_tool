@@ -42,9 +42,9 @@ def enable(fob_bridge, package_name):
     hash_object = hashlib.sha256()
     hash_object.update(message_content)
     
-    print(original_hash_bytes)
-    print(message)
-    print(hash_object.digest())
+    #print(original_hash_bytes)
+    #print(message)
+    #print(hash_object.digest())
 
     # Compare the extracted hash bytes to the hash of the message content
     if original_hash_bytes != hash_object.digest():
