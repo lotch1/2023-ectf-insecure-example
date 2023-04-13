@@ -14,6 +14,7 @@
 
 import socket
 import argparse
+import sys
 
 
 # @brief Function to monitor unlocking car
@@ -30,24 +31,39 @@ def unlock(car_bridge):
     # Try to receive data while unlocking - if empty, unlock failed
     unlock_received: bytes = b""
     
-    try:
-        # What is the length of the unlock message? I think that the #7 in the below
-        # statements should reflect that.
-        start_len = 192
-        
-        unlock_received = car_sock.recv(start_len)
-        #start_len = (len(unlock_received))
-        while len(unlock_received) != start_len:
-            unlock_received += car_sock.recv((start_len - len(unlock_received)))
-    except socket.timeout:
-        print("Socket timeout - finished receiving")
+    while True:
+        try:
+            unlock_received += car_sock.recv(64)
+        except socket.timeout:
+            print("Socket timeout - finished receiving")
+            break
 
     # If no data receive, unlock failed
     if len(unlock_received) == 0:
-        print("Failed to unlock")
+        sys.exit("Failed to unlock")
     # If data received, print out unlock message and features
     else:
         print(unlock_received)
+
+
+    # try:
+    #     # What is the length of the unlock message? I think that the #7 in the below
+    #     # statements should reflect that.
+    #     start_len = 192
+        
+    #     unlock_received = car_sock.recv(start_len)
+    #     #start_len = (len(unlock_received))
+    #     while len(unlock_received) != start_len:
+    #         unlock_received += car_sock.recv((start_len - len(unlock_received)))
+    # except socket.timeout:
+    #     print("Socket timeout - finished receiving")
+
+    # # If no data receive, unlock failed
+    # if len(unlock_received) == 0:
+    #     print("Failed to unlock")
+    # # If data received, print out unlock message and features
+    # else:
+    #     print(unlock_received)
 
     return 0
 
