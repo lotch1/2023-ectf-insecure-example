@@ -145,10 +145,10 @@ int main(void)
       //strncpy((char *)(fob_state_ram.random_info.seed), SEED, 16);
       fob_state_ram.paired = FLASH_PAIRED;
 
-      crypto_aead_encrypt(fob_state_ram.pair_info_out.car_id, &clen, fob_state_ram.pair_info.car_id, mlen, NULL, adlen, NULL, nonce, key);
-      crypto_aead_encrypt(fob_state_ram.pair_info_out.password, &clen, fob_state_ram.pair_info.password, mlen, NULL, adlen, NULL, nonce, key);
-      crypto_aead_encrypt(fob_state_ram.pair_info_out.pin, &clen, fob_state_ram.pair_info.pin, mlen, NULL, adlen, NULL, nonce, key);
-      crypto_aead_encrypt(fob_state_ram.pair_info_out.auth, &clen, fob_state_ram.pair_info.auth, mlen, NULL, adlen, NULL, nonce, key);
+      crypto_aead_encrypt((char *)fob_state_ram.pair_info_out.car_id, &clen, (char *)fob_state_ram.pair_info.car_id, mlen, NULL, adlen, NULL, (char *)nonce, (char *)key);
+      crypto_aead_encrypt((char *)fob_state_ram.pair_info_out.password, &clen, (char *)fob_state_ram.pair_info.password, mlen, NULL, adlen, NULL, (char *)nonce, (char *)key);
+      crypto_aead_encrypt((char *)fob_state_ram.pair_info_out.pin, &clen, (char *)fob_state_ram.pair_info.pin, mlen, NULL, adlen, NULL, (char *)nonce, (char *)key);
+      crypto_aead_encrypt((char *)fob_state_ram.pair_info_out.auth, &clen, (char *)fob_state_ram.pair_info.auth, mlen, NULL, adlen, NULL, (char *)nonce, (char *)key);
 
       
 
@@ -290,10 +290,10 @@ void pairFob(FLASH_DATA *fob_state_ram)
     receive_board_message_by_type(&message, PAIR_MAGIC);
     fob_state_ram->paired = FLASH_PAIRED;
 
-    crypto_aead_decrypt(fob_state_ram->pair_info.car_id, &mlen, NULL, fob_state_ram->pair_info_out.car_id, clen, NULL, adlen, nonce, key);
-    crypto_aead_decrypt(fob_state_ram->pair_info.password, &mlen, NULL, fob_state_ram->pair_info_out.password, clen, NULL, adlen, nonce, key);
-    crypto_aead_decrypt(fob_state_ram->pair_info.pin, &mlen, NULL, fob_state_ram->pair_info_out.pin, clen, NULL, adlen, nonce, key);
-    crypto_aead_decrypt(fob_state_ram->pair_info.auth, &mlen, NULL, fob_state_ram->pair_info_out.auth, clen, NULL, adlen, nonce, key);
+    crypto_aead_decrypt((char *)fob_state_ram->pair_info.car_id, &mlen, NULL, (char *)fob_state_ram->pair_info_out.car_id, clen, NULL, adlen, (char *)nonce, (char *)key);
+    crypto_aead_decrypt((char *)fob_state_ram->pair_info.password, &mlen, NULL, (char *)fob_state_ram->pair_info_out.password, clen, NULL, adlen, (char *)nonce, (char *)key);
+    crypto_aead_decrypt((char *)fob_state_ram->pair_info.pin, &mlen, NULL, (char *)fob_state_ram->pair_info_out.pin, clen, NULL, adlen, (char *)nonce, (char *)key);
+    crypto_aead_decrypt((char *)fob_state_ram->pair_info.auth, &mlen, NULL, (char *)fob_state_ram->pair_info_out.auth, clen, NULL, adlen, (char *)nonce, (char *)key);
 
     strcpy((char *)fob_state_ram->feature_info.car_id,
            (char *)fob_state_ram->pair_info.car_id);
@@ -393,7 +393,7 @@ void unlockCar(FLASH_DATA *fob_state_ram)
     
     if (message.magic == NONCE_MAGIC)
     {
-      crypto_aead_encrypt(ct, &clen, fob_state_ram->pair_info.password, mlen, NULL, adlen, NULL, message.buffer, key);
+      crypto_aead_encrypt(&ct, &clen, (char *)fob_state_ram->pair_info.password, mlen, NULL, adlen, NULL, (char *)message.buffer, (char *)key);
       MESSAGE_PACKET message2;
       message2.message_len = 32;
       message2.magic = UNLOCK_MAGIC;
