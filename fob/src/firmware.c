@@ -93,6 +93,7 @@ typedef struct
   PAIR_PACKET pair_info;
   FEATURE_DATA feature_info;
   PAIR_PACKET_OUT pair_info_out;
+  uint8_t pading[3];
 } FLASH_DATA;
 
 /*** Function definitions ***/
@@ -145,10 +146,10 @@ int main(void)
       //strncpy((char *)(fob_state_ram.random_info.seed), SEED, 16);
       fob_state_ram.paired = FLASH_PAIRED;
 
-      crypto_aead_encrypt((char *)fob_state_ram.pair_info_out.car_id, &clen, (char *)fob_state_ram.pair_info.car_id, mlen, NULL, adlen, NULL, (char *)nonce, (char *)key);
-      crypto_aead_encrypt((char *)fob_state_ram.pair_info_out.password, &clen, (char *)fob_state_ram.pair_info.password, mlen, NULL, adlen, NULL, (char *)nonce, (char *)key);
-      crypto_aead_encrypt((char *)fob_state_ram.pair_info_out.pin, &clen, (char *)fob_state_ram.pair_info.pin, mlen, NULL, adlen, NULL, (char *)nonce, (char *)key);
-      crypto_aead_encrypt((char *)fob_state_ram.pair_info_out.auth, &clen, (char *)fob_state_ram.pair_info.auth, mlen, NULL, adlen, NULL, (char *)nonce, (char *)key);
+      crypto_aead_encrypt(fob_state_ram.pair_info_out.car_id, &clen, fob_state_ram.pair_info.car_id, mlen, NULL, adlen, NULL, nonce, key);
+      crypto_aead_encrypt(fob_state_ram.pair_info_out.password, &clen, fob_state_ram.pair_info.password, mlen, NULL, adlen, NULL, nonce, key);
+      crypto_aead_encrypt(fob_state_ram.pair_info_out.pin, &clen, fob_state_ram.pair_info.pin, mlen, NULL, adlen, NULL, nonce, key);
+      crypto_aead_encrypt(fob_state_ram.pair_info_out.auth, &clen, fob_state_ram.pair_info.auth, mlen, NULL, adlen, NULL, nonce, key);
 
       
 
@@ -212,11 +213,11 @@ int main(void)
         uart_buffer[uart_buffer_index] = 0x00;
         uart_buffer_index = 0;
         
-        if (!(memcmp_new((char *)uart_buffer, "enable", 7)))
+        if (!(memcmp_new(uart_buffer, (uint8_t *)"enable", 7)))
         {
           enableFeature(&fob_state_ram);
         }
-        else if (!(memcmp_new((char *)uart_buffer, "pair", 4)))
+        else if (!(memcmp_new(uart_buffer, (uint8_t *)"pair", 4)))
         {
           pairFob(&fob_state_ram);
         }
@@ -270,8 +271,8 @@ void pairFob(FLASH_DATA *fob_state_ram)
     if (bytes_read == 6)
     {
       // If the pin is correct
-      if (!(memcmp_new((char *)uart_buffer,
-                   (char *)fob_state_ram->pair_info.pin, 6)))
+      if (!(memcmp_new(uart_buffer,
+                   fob_state_ram->pair_info.pin, 6)))
       {
         // Pair the new key by sending a PAIR_PACKET structure
         // with required information to unlock door
@@ -290,17 +291,17 @@ void pairFob(FLASH_DATA *fob_state_ram)
     receive_board_message_by_type(&message, PAIR_MAGIC);
     fob_state_ram->paired = FLASH_PAIRED;
 
-    crypto_aead_decrypt((char *)fob_state_ram->pair_info.car_id, &mlen, NULL, (char *)fob_state_ram->pair_info_out.car_id, clen, NULL, adlen, (char *)nonce, (char *)key);
-    crypto_aead_decrypt((char *)fob_state_ram->pair_info.password, &mlen, NULL, (char *)fob_state_ram->pair_info_out.password, clen, NULL, adlen, (char *)nonce, (char *)key);
-    crypto_aead_decrypt((char *)fob_state_ram->pair_info.pin, &mlen, NULL, (char *)fob_state_ram->pair_info_out.pin, clen, NULL, adlen, (char *)nonce, (char *)key);
-    crypto_aead_decrypt((char *)fob_state_ram->pair_info.auth, &mlen, NULL, (char *)fob_state_ram->pair_info_out.auth, clen, NULL, adlen, (char *)nonce, (char *)key);
+    crypto_aead_decrypt(fob_state_ram->pair_info.car_id, &mlen, NULL, fob_state_ram->pair_info_out.car_id, clen, NULL, adlen, nonce, key);
+    crypto_aead_decrypt(fob_state_ram->pair_info.password, &mlen, NULL, fob_state_ram->pair_info_out.password, clen, NULL, adlen, nonce, key);
+    crypto_aead_decrypt(fob_state_ram->pair_info.pin, &mlen, NULL, fob_state_ram->pair_info_out.pin, clen, NULL, adlen, nonce, key);
+    crypto_aead_decrypt(fob_state_ram->pair_info.auth, &mlen, NULL, fob_state_ram->pair_info_out.auth, clen, NULL, adlen, nonce, key);
 
     strcpy((char *)fob_state_ram->feature_info.car_id,
            (char *)fob_state_ram->pair_info.car_id);
 
     uart_write(HOST_UART, (uint8_t *)"Paired", 6);
 
-    saveFobState(&fob_state_ram);
+    saveFobState(fob_state_ram);
   }
 }
 
@@ -334,12 +335,12 @@ void enableFeature(FLASH_DATA *fob_state_ram)
     sha256_easy_hash(concatenated_message, 9, hash);
     
     // Authenticate the extracted hash bytes
-    if (memcmp_new(hash, (char *)enable_message->Hash, 4) != 0){
+    if (memcmp_new(hash, enable_message->Hash, 4) != 0){
       return;
     }
     
-    if (memcmp_new((char *)fob_state_ram->pair_info.car_id,
-               (char *)enable_message->car_id, 8) != 0)
+    if (memcmp_new(fob_state_ram->pair_info.car_id,
+               enable_message->car_id, 8) != 0)
     {
       return;
     }
@@ -363,7 +364,7 @@ void enableFeature(FLASH_DATA *fob_state_ram)
     strncpy((char*)fob_state_ram->feature_info.Hash[fob_state_ram->feature_info.num_active], (char*)enable_message->Hash, 32);
     fob_state_ram->feature_info.num_active++;
 
-    saveFobState(&fob_state_ram);
+    saveFobState(fob_state_ram);
     uart_write(HOST_UART, (uint8_t *)"Enabled", 7);
   }
 }
@@ -385,7 +386,7 @@ void unlockCar(FLASH_DATA *fob_state_ram)
     message.message_len = 16;
     message.magic = AUTH_MAGIC;
     message.buffer = buffer;
-    strncpy((char *)buffer, fob_state_ram->pair_info.auth, 16);
+    strncpy((char *)buffer, (char *)fob_state_ram->pair_info.auth, 16);
     //buffer = fob_state_ram->pair_info.auth;
     send_board_message(&message);
     
@@ -393,7 +394,7 @@ void unlockCar(FLASH_DATA *fob_state_ram)
     
     if (message.magic == NONCE_MAGIC)
     {
-      crypto_aead_encrypt(&ct, &clen, (char *)fob_state_ram->pair_info.password, mlen, NULL, adlen, NULL, (char *)message.buffer, (char *)key);
+      crypto_aead_encrypt(ct, &clen, fob_state_ram->pair_info.password, mlen, NULL, adlen, NULL, message.buffer, key);
       MESSAGE_PACKET message2;
       message2.message_len = 32;
       message2.magic = UNLOCK_MAGIC;

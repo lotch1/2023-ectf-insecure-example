@@ -5,6 +5,7 @@
         "rom.h": "c",
         "hw_nvic.h": "c",
         "stdbool.h": "c",
-        "unistd.h": "c"
+        "unistd.h": "c",
+        "flash.h": "c"
     }
 }

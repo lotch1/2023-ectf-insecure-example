@@ -27,6 +27,7 @@
 #include "driverlib/pin_map.h"
 #include "driverlib/sysctl.h"
 #include "driverlib/timer.h"
+#include "driverlib/flash.h"
 
 #include "secrets.h"
 
@@ -132,7 +133,6 @@ int main(void) {
  */
 void unlockCar(FLASH_DATA *car_state_ram) {
   unsigned char       msg[MAX_MESSAGE_LENGTH];
-  unsigned char		ad[MAX_ASSOCIATED_DATA_LENGTH];
   unsigned char		nonce[CRYPTO_NPUBBYTES];
   unsigned long long  mlen;
 
@@ -309,5 +309,5 @@ void B16_RNG (uint8_t b[16], FLASH_DATA *car_state_ram){
     b[4 * i] = (uint8_t)(rng_value>>=8);
   }
 
-  saveCarState(&car_state_ram);
+  saveCarState(car_state_ram);
 }
