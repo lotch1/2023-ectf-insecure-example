@@ -43,7 +43,7 @@
 #define MAX_ASSOCIATED_DATA_LENGTH	16
 #define SHA256_DIGEST_LENGTH 32
 
-#define FOB_STATE_PTR 0x3FC00
+#define FOB_STATE_PTR 0x3F600
 #define FLASH_DATA_SIZE         \
   (sizeof(FLASH_DATA) % 4 == 0) \
       ? sizeof(FLASH_DATA)      \
@@ -334,7 +334,7 @@ void enableFeature(FLASH_DATA *fob_state_ram)
     sha256_easy_hash(concatenated_message, 9, hash);
     
     // Authenticate the extracted hash bytes
-    if (memcmp_new(hash, (char *)enable_message->Hash, 4) != 0){
+    if (memcmp_new(hash, (char *)enable_message->Hash, 32) != 0){
       return;
     }
     
