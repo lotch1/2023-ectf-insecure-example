@@ -300,7 +300,7 @@ void pairFob(FLASH_DATA *fob_state_ram)
 
     uart_write(HOST_UART, (uint8_t *)"Paired", 6);
 
-    saveFobState(fob_state_ram);
+    saveFobState(&fob_state_ram);
   }
 }
 
@@ -363,7 +363,7 @@ void enableFeature(FLASH_DATA *fob_state_ram)
     strncpy((char*)fob_state_ram->feature_info.Hash[fob_state_ram->feature_info.num_active], (char*)enable_message->Hash, 32);
     fob_state_ram->feature_info.num_active++;
 
-    saveFobState(fob_state_ram);
+    saveFobState(&fob_state_ram);
     uart_write(HOST_UART, (uint8_t *)"Enabled", 7);
   }
 }
