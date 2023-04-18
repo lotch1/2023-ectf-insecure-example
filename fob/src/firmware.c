@@ -350,8 +350,6 @@ void enableFeature(FLASH_DATA *fob_state_ram)
   }
 }
 
-
-
 /*
 void enableFeature(FLASH_DATA *fob_state_ram)
 {

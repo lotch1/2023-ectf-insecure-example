@@ -13,6 +13,7 @@
 # @copyright Copyright (c) 2023 The MITRE Corporation
 
 import argparse
+import hashlib
 
 
 # @brief Function to create a new feature package
@@ -21,17 +22,24 @@ import argparse
 # @param feature_number, the feature number being packaged
 def package(package_name, car_id, feature_number):
 
+    hash_object = hashlib.sha256()
+    
     # Pad id lenth to 8 bytes
     car_id_len = len(car_id)
     car_id_pad = (8 - car_id_len) * "\0"
-
+    
     # Create package to match defined structure on fob
     package_message_bytes = (
         str.encode(car_id + car_id_pad)
         + feature_number.to_bytes(1, "little")
-        + str.encode("\n")
+        #+ str.encode("\n")
     )
+    hash_object.update(package_message_bytes)
 
+    hash_bytes = hash_object.digest()
+
+    package_message_bytes = package_message_bytes + hash_bytes + str.encode("\n")
+    
     # Write data out to package file
     # /package_dir/ is the mounted location inside the container - should not change
     with open(f"/package_dir/{package_name}", "wb") as fhandle:
