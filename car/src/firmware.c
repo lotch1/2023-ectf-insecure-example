@@ -82,7 +82,7 @@ const uint8_t car_id[8] = CAR_ID;
 const uint8_t auth[16] = AUTHENTICATON;
 const uint8_t key[16] = KEY;
 
-#define CAR_STATE_PTR 0x3FC00
+#define CAR_STATE_PTR 0x3F600
 #define FLASH_DATA_SIZE         \
   (sizeof(FLASH_DATA) % 4 == 0) \
       ? sizeof(FLASH_DATA)      \
@@ -98,19 +98,19 @@ const uint8_t key[16] = KEY;
  */
 int main(void) {
 
-  FLASH_DATA car_state_ram;
-  FLASH_DATA *car_state_flash = (FLASH_DATA *)CAR_STATE_PTR;
+  //FLASH_DATA car_state_ram;
+  //FLASH_DATA *car_state_flash = (FLASH_DATA *)CAR_STATE_PTR;
 
-  if (car_state_flash->paired == FLASH_UNPAIRED){
-    simplerandom_cong_seed(&car_state_ram.rng_cong, 1234567890u);
-    car_state_ram.paired = FLASH_PAIRED;
-    saveCarState(&car_state_ram);
-  }
+  //if (car_state_flash->paired == FLASH_UNPAIRED){
+    //simplerandom_cong_seed(&car_state_ram.rng_cong, 1234567890u);
+    //car_state_ram.paired = FLASH_PAIRED;
+    //saveCarState(&car_state_ram);
+  //}
 
-  if (car_state_flash->paired == FLASH_PAIRED)
-  {
-    memcpy(&car_state_ram, car_state_flash, FLASH_DATA_SIZE);
-  }
+  //if (car_state_flash->paired == FLASH_PAIRED)
+  //{
+    //memcpy(&car_state_ram, car_state_flash, FLASH_DATA_SIZE);
+  //}
   //uint8_t data[16];
 
   // Ensure EEPROM peripheral is enabled
