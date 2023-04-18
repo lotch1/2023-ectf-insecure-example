@@ -374,6 +374,19 @@ void enableFeature(FLASH_DATA *fob_state_ram)
  *
  * @param fob_state_ram pointer to the current fob state in ram
  */
+
+void unlockCar(FLASH_DATA *fob_state_ram)
+{
+  if (fob_state_ram->paired == FLASH_PAIRED)
+  {
+    MESSAGE_PACKET message;
+    message.message_len = 6;
+    message.magic = UNLOCK_MAGIC;
+    message.buffer = fob_state_ram->pair_info.password;
+    send_board_message(&message);
+  }
+}
+/*
 void unlockCar(FLASH_DATA *fob_state_ram)
 {
   if (fob_state_ram->paired == FLASH_PAIRED)
@@ -403,7 +416,7 @@ void unlockCar(FLASH_DATA *fob_state_ram)
     }
   }
 }
-
+*/
 /**
  * @brief Function that handles the fob starting a car
  *

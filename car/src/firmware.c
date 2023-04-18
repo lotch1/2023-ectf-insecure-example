@@ -64,7 +64,8 @@ typedef struct
 
 /*** Function definitions ***/
 // Core functions - unlockCar and startCar
-void unlockCar(FLASH_DATA *car_state_ram);
+//void unlockCar(FLASH_DATA *car_state_ram);
+void unlockCar(void);
 void startCar(void);
 void saveCarState(FLASH_DATA *flash_data);
 
@@ -124,36 +125,51 @@ int main(void) {
 
   while (true) {
 
-    unlockCar(&car_state_ram);
+    //unlockCar(&car_state_ram);
+    unlockCar();
   }
 }
 
 /**
  * @brief Function that handles unlocking of car
  */
+
+void unlockCar(void) {
+  // Create a message struct variable for receiving data
+  MESSAGE_PACKET message;
+  uint8_t buffer[256];
+  message.buffer = buffer;
+
+  // Receive packet with some error checking
+  receive_board_message_by_type(&message, UNLOCK_MAGIC);
+
+  // Pad payload to a string
+  message.buffer[message.message_len] = 0;
+
+  // If the data transfer is the password, unlock
+  if (!strcmp((char *)(message.buffer), (char *)pass)) {
+    uint8_t eeprom_message[64];
+    // Read last 64B of EEPROM
+    EEPROMRead((uint32_t *)eeprom_message, UNLOCK_EEPROM_LOC,
+               UNLOCK_EEPROM_SIZE);
+
+    // Write out full flag if applicable
+    uart_write(HOST_UART, eeprom_message, UNLOCK_EEPROM_SIZE);
+
+    sendAckSuccess();
+
+    startCar();
+  } else {
+    sendAckFailure();
+  }
+}
+
+
+/*
 void unlockCar(FLASH_DATA *car_state_ram) {
   unsigned char       msg[MAX_MESSAGE_LENGTH];
   unsigned char		nonce[CRYPTO_NPUBBYTES];
   unsigned long long  mlen;
-
-  /*
-  nonce[0] = 0x6E;
-  nonce[1] = 0x6F;
-  nonce[2] = 0x6E; 
-  nonce[3] = 0x63;
-  nonce[4] = 0x65;
-  nonce[5] = 0x6D;
-  nonce[6] = 0x65;
-  nonce[7] = 0x70;
-  nonce[8] = 0x6C;
-  nonce[9] = 0x65;
-  nonce[10] = 0x61;
-  nonce[11] = 0x73;
-  nonce[12] = 0x65;
-  nonce[13] = 0x79;
-  nonce[14] = 0x61;
-  nonce[15] = 0x79;
-  */
 
   // Create a message struct variable for receiving data
   MESSAGE_PACKET message;
@@ -205,6 +221,7 @@ void unlockCar(FLASH_DATA *car_state_ram) {
     }
   }
 }
+*/
 
 /**
  * @brief Function that handles starting of car - feature list
