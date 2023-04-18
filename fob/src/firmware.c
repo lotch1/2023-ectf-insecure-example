@@ -380,7 +380,7 @@ void unlockCar(FLASH_DATA *fob_state_ram)
   if (fob_state_ram->paired == FLASH_PAIRED)
   {
     MESSAGE_PACKET message;
-    message.message_len = 6;
+    message.message_len = 16;
     message.magic = UNLOCK_MAGIC;
     message.buffer = fob_state_ram->pair_info.password;
     send_board_message(&message);
