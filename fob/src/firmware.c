@@ -310,6 +310,49 @@ void pairFob(FLASH_DATA *fob_state_ram)
  *
  * @param fob_state_ram pointer to the current fob state in ram
  */
+
+void enableFeature(FLASH_DATA *fob_state_ram)
+{
+  if (fob_state_ram->paired == FLASH_PAIRED)
+  {
+    uint8_t uart_buffer[20];
+    uart_readline(HOST_UART, uart_buffer);
+
+    ENABLE_PACKET *enable_message = (ENABLE_PACKET *)uart_buffer;
+    if (strcmp((char *)fob_state_ram->pair_info.car_id,
+               (char *)enable_message->car_id))
+    {
+      return;
+    }
+
+    // Feature list full
+    if (fob_state_ram->feature_info.num_active == NUM_FEATURES)
+    {
+      return;
+    }
+
+    // Search for feature in list
+    for (int i = 0; i < fob_state_ram->feature_info.num_active; i++)
+    {
+      if (fob_state_ram->feature_info.features[i] == enable_message->feature)
+      {
+        return;
+      }
+    }
+
+    fob_state_ram->feature_info
+        .features[fob_state_ram->feature_info.num_active] =
+        enable_message->feature;
+    fob_state_ram->feature_info.num_active++;
+
+    saveFobState(fob_state_ram);
+    uart_write(HOST_UART, (uint8_t *)"Enabled", 7);
+  }
+}
+
+
+
+/*
 void enableFeature(FLASH_DATA *fob_state_ram)
 {
   
@@ -368,6 +411,7 @@ void enableFeature(FLASH_DATA *fob_state_ram)
     uart_write(HOST_UART, (uint8_t *)"Enabled", 7);
   }
 }
+*/
 
 /**
  * @brief Function that handles the fob unlocking a car
