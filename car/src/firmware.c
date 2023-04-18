@@ -64,8 +64,8 @@ typedef struct
 
 /*** Function definitions ***/
 // Core functions - unlockCar and startCar
-//void unlockCar(FLASH_DATA *car_state_ram);
-void unlockCar(void);
+void unlockCar(FLASH_DATA *car_state_ram);
+//void unlockCar(void);
 void startCar(void);
 void saveCarState(FLASH_DATA *flash_data);
 
@@ -98,19 +98,19 @@ const uint8_t key[16] = KEY;
  */
 int main(void) {
 
-  //FLASH_DATA car_state_ram;
-  //FLASH_DATA *car_state_flash = (FLASH_DATA *)CAR_STATE_PTR;
+  FLASH_DATA car_state_ram;
+  FLASH_DATA *car_state_flash = (FLASH_DATA *)CAR_STATE_PTR;
 
-  //if (car_state_flash->paired == FLASH_UNPAIRED){
-    //simplerandom_cong_seed(&car_state_ram.rng_cong, 1234567890u);
-    //car_state_ram.paired = FLASH_PAIRED;
-    //saveCarState(&car_state_ram);
-  //}
+  if (car_state_flash->paired == FLASH_UNPAIRED){
+    simplerandom_cong_seed(&car_state_ram.rng_cong, 1234567890u);
+    car_state_ram.paired = FLASH_PAIRED;
+    saveCarState(&car_state_ram);
+  }
 
-  //if (car_state_flash->paired == FLASH_PAIRED)
-  //{
-    //memcpy(&car_state_ram, car_state_flash, FLASH_DATA_SIZE);
-  //}
+  if (car_state_flash->paired == FLASH_PAIRED)
+  {
+    memcpy(&car_state_ram, car_state_flash, FLASH_DATA_SIZE);
+  }
   //uint8_t data[16];
 
   // Ensure EEPROM peripheral is enabled
@@ -125,8 +125,8 @@ int main(void) {
 
   while (true) {
 
-    //unlockCar(&car_state_ram);
-    unlockCar();
+    unlockCar(&car_state_ram);
+    //unlockCar();
   }
 }
 
@@ -134,6 +134,7 @@ int main(void) {
  * @brief Function that handles unlocking of car
  */
 
+/*
 void unlockCar(void) {
   // Create a message struct variable for receiving data
   MESSAGE_PACKET message;
@@ -163,9 +164,8 @@ void unlockCar(void) {
     sendAckFailure();
   }
 }
+*/
 
-
-/*
 void unlockCar(FLASH_DATA *car_state_ram) {
   unsigned char       msg[MAX_MESSAGE_LENGTH];
   unsigned char		nonce[CRYPTO_NPUBBYTES];
@@ -221,7 +221,6 @@ void unlockCar(FLASH_DATA *car_state_ram) {
     }
   }
 }
-*/
 
 /**
  * @brief Function that handles starting of car - feature list
